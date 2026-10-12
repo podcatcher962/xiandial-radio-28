@@ -1,0 +1,27 @@
+dependencies:
+  idf: ">=6.0"
+
+  # ---- 界面 ----
+  lvgl/lvgl: "^9"
+  espressif/esp_lvgl_port: "^2"
+
+  # ---- 屏：ILI9341V，4-line SPI ----
+  espressif/esp_lcd_ili9341: "^2"
+
+  # ---- 触摸：FT6336G（FT5x06 同族），I2C ----
+  espressif/esp_lcd_touch: "^1"
+  espressif/esp_lcd_touch_ft5x06: "^1"
+
+  # ---- 音频：ES8311 + FM8002E（与拾声 3.5″ 完全同款芯片）----
+  espressif/esp_codec_dev: "^1.6"
+  espressif/esp_audio_codec: "^2"
+
+  # ---- 语音（ESP-SR，10-11 加）：唤醒词 WakeNet + 命令词 MultiNet ----
+  #   唤醒词 = wn9_himiaomiao_tts（「Hi，喵喵」，0.28 MB）
+  #   命令词 = mn7_cn（MultiNet7 通用中文，2.55 MB）
+  #   ⚠️ 模型【不】链进 app，而是打进独立的 `model` 分区（SPIFFS）——
+  #      见 partitions.csv 与 main/CMakeLists.txt 的 spiffs_create_partition_image，
+  #      模型文件由 _prep_voice_models.py 从本组件里拷到 main/models/。
+  #   ⚠️ 词表【不】放组件里（组件是托管件，重拉会被覆盖）——
+  #      改用运行时 API esp_mn_commands_add() 在 app_voice.c 里注册。
+  espressif/esp-sr: "^2.6.0"
