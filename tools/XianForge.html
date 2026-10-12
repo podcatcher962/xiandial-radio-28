@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>拾声 · 台源转换器</title>
+<style>
+:root{
+  --bg:#1B1C1F; --card:#24262A; --card2:#2C2F34; --line:#3A3D43;
+  --tx:#E6E4E1; --tx2:#A5A29D;
+  --acc:#4A9EFF; --ok:#3FC08A; --warn:#E8A33D; --bad:#E2685F;
+  --ui:100%; --tap:34px;
+}
+html[data-theme="light"]{
+  --bg:#F2F3F5; --card:#FFFFFF; --card2:#E9EBEE; --line:#C8CCD2;
+  --tx:#1D1F23; --tx2:#5E646C;
+  --acc:#1668C4; --ok:#1E8A5F; --warn:#A96A12; --bad:#C0392B;
+}
+html[data-contrast="high"]{ --line:#8A8F98; --tx2:#6B7078; }
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html{font-size:calc(16px*var(--ui)/100)}
+body{
+  margin:0; background:var(--bg); color:var(--tx);
+  font:15px/1.65 "Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+}
+a{color:var(--acc)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 14px 60px}
+
+/* ── 顶栏 ── */
+#top{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:12px 0 10px;border-bottom:1px solid var(--line);margin-bottom:16px;
+}
+#brand{font-size:19px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+#brand small{display:block;font-size:11px;font-weight:400;color:var(--tx2);letter-spacing:.02em}
+#top .sp{flex:1 1 auto}
+#topSeg{display:flex;gap:6px;flex-wrap:wrap}
+#topSeg button,.btn{
+  min-height:var(--tap);padding:7px 13px;border:1px solid var(--line);
+  background:var(--card2);color:var(--tx);border-radius:8px;cursor:pointer;
+  font:inherit;font-size:14px;transition:background .15s,border-color .15s;
+}
+#topSeg button:hover,.btn:hover{background:var(--line)}
+#topSeg button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.sm{min-height:28px;padding:4px 10px;font-size:13px}
+
+/* ── 导航 ── */
+#nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:10px}
+#nav button{
+  min-height:var(--tap);padding:7px 14px;border:1px solid transparent;background:transparent;
+  color:var(--tx2);border-radius:7px;cursor:pointer;font:inherit;font-size:14px;white-space:nowrap
+}
+#nav button:hover{color:var(--tx);background:var(--card2)}
+#nav button.on{color:var(--acc);background:var(--card2);border-color:var(--line);font-weight:600}
+
+/* ── 卡片 ── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:15px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font-size:16px}
+.card h3{margin:14px 0 6px;font-size:14px;color:var(--tx)}
+.hint{color:var(--tx2);font-size:13px;margin:0 0 11px}
+
+/* ── 拖放区 ── */
+#drop{
+  border:2px dashed var(--line);border-radius:11px;padding:26px 16px;text-align:center;
+  cursor:pointer;background:var(--card2);transition:border-color .15s,background .15s
+}
+#drop.hot{border-color:var(--acc);background:var(--acc);color:#fff}
+#drop .big{font-size:15px;font-weight:600;margin-bottom:5px}
+#drop .sm2{font-size:13px;color:var(--tx2)}
+#drop.hot .sm2{color:#dce9fb}
+
+/* ── 表单 ── */
+textarea{
+  width:100%;min-height:150px;background:var(--bg);color:var(--tx);
+  border:1px solid var(--line);border-radius:9px;padding:10px;
+  font:13px/1.6 Consolas,"Courier New",monospace;resize:vertical
+}
+input[type=text]{
+  background:var(--bg);color:var(--tx);border:1px solid var(--line);
+  border-radius:8px;padding:8px 10px;font:inherit;min-height:var(--tap);width:100%
+}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:9px 0}
+.row>label{color:var(--tx2);font-size:13px;white-space:nowrap}
+.chk{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;min-height:var(--tap)}
+.chk input{width:17px;height:17px;accent-color:var(--acc);cursor:pointer}
+
+/* ── chips ── */
+.chips{display:grid;gap:7px;margin:8px 0}
+.chips.c1{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.chips.c2{grid-template-columns:repeat(auto-fill,minmax(78px,1fr))}
+.chip{
+  padding:6px 9px;border:1px solid var(--line);background:var(--card2);color:var(--tx2);
+  border-radius:7px;cursor:pointer;font-size:13px;text-align:center;
+  transition:background .15s,color .15s,border-color .15s
+}
+.chip:hover{border-color:var(--acc);color:var(--tx)}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+
+/* ── 统计 ── */
+.stats{display:flex;gap:9px;flex-wrap:wrap;margin:11px 0}
+.st{
+  flex:1 1 104px;background:var(--card2);border:1px solid var(--line);
+  border-radius:9px;padding:9px 11px
+}
+.st b{display:block;font-size:21px;line-height:1.25}
+.st span{font-size:12px;color:var(--tx2)}
+.st.ok b{color:var(--ok)} .st.warn b{color:var(--warn)} .st.bad b{color:var(--bad)}
+
+/* ── 表格 ── */
+#tblBox{border:1px solid var(--line);border-radius:9px;overflow:auto;max-height:560px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--card2);position:sticky;top:0;z-index:2;font-size:12px;color:var(--tx2);white-space:nowrap}
+tr.err td{background:rgba(226,104,95,.13)}
+td.nm{min-width:150px;max-width:260px;word-break:break-all}
+td.u{min-width:210px;font:12px/1.5 Consolas,monospace;word-break:break-all}
+td.s{white-space:nowrap}
+.sel{
+  background:var(--bg);color:var(--tx);border:1px solid var(--line);
+  border-radius:6px;padding:3px 5px;font:inherit;font-size:12px;max-width:150px
+}
+.tag{font-size:11px;padding:2px 6px;border-radius:5px;display:inline-block}
+.tag.h{background:var(--ok);color:#06281c}
+.tag.x{background:var(--bad);color:#fff}
+.tag.w{background:var(--warn);color:#2b1c00}
+.empty{padding:26px;text-align:center;color:var(--tx2);font-size:14px}
+
+/* ── 检查清单 ── */
+#chkList{margin:10px 0 0;padding:0;list-style:none;font-size:13px}
+#chkList li{padding:5px 9px;border-radius:7px;margin-bottom:5px;display:flex;gap:8px;align-items:flex-start}
+#chkList li.pass{background:rgba(63,192,138,.13);color:var(--ok)}
+#chkList li.err{background:rgba(226,104,95,.14);color:var(--bad)}
+#chkList li.warn{background:rgba(232,163,61,.14);color:var(--warn)}
+#chkList code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
+
+pre{
+  background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:11px;
+  overflow:auto;max-height:420px;font:12px/1.6 Consolas,"Courier New",monospace;margin:9px 0
+}
+.doc h3{margin:16px 0 5px;font-size:15px;color:var(--acc)}
+.doc p,.doc li{color:var(--tx);font-size:14px}
+.doc ul,.doc ol{padding-left:22px}
+.doc table{margin:9px 0}
+.doc td,.doc th{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.sig{color:var(--tx2);font-size:12px;margin-top:26px;text-align:center;line-height:1.9}
+
+@media(max-width:600px){
+  #top{gap:7px;padding:9px 0 8px}
+  #brand{font-size:17px}
+  #nav{gap:4px}
+  #nav button{padding:6px 9px;font-size:13px;white-space:normal}
+  .st{flex:1 1 calc(50% - 5px)}
+}
+html[data-motion="low"] *{animation:none!important;transition:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div id="top">
+  <div id="brand">拾声 · 台源转换器<small>XianForge　台单 → stations.tsv</small></div>
+  <div class="sp"></div>
+  <div id="topSeg">
+    <button id="btnTheme" title="切换深浅主题">◐ 主题</button>
+    <button id="btnEn" title="切换中英文">EN</button>
+  </div>
+</div>
+
+<div id="nav"></div>
+<div id="main"></div>
+
+<div class="sig">
+  <div id="sigLine">© 永远的兰兰（Lanlan Eternal）</div>
+</div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   拾声 · 台源转换器  XianForge  v1.0
+   格式契约：拾声硬件版-台源文件格式规格.md v1
+   ══════════════════════════════════════════════════════════════ */
+
+'use strict';
+
+/* ───────── 常量：与固件 g_cat_name / g_prov_name 逐字一致 ───────── */
+var CATS = ['新闻综合','交通台','音乐','文艺','说书','戏曲','怀旧老歌',
+            '网络台','教育台','电视伴音','综合','宗教','境外新闻'];
+var PROVS_CN = ['北京','天津','河北','山西','内蒙古','辽宁','吉林','黑龙江','上海','江苏','浙江',
+                '安徽','福建','江西','山东','河南','湖北','湖南','广东','广西','海南','重庆','四川',
+                '贵州','云南','西藏','陕西','甘肃','青海','宁夏','新疆'];
+var PROVS_XW = ['中国台湾','中国香港','中国澳门','其他华语',
+                '北美','欧洲','日韩','新马','东南亚','大洋洲','海外中文'];
+var PROVS = PROVS_CN.concat(PROVS_XW);
+var SPECIAL_PROV = ['全国','其他'];   /* → 固件 NET_PROV_NONE(255) */
+
+var MAX_N    = 2000;    /* 固件 PSRAM 上限 */
+var MAX_NAME = 71;      /* UTF-8 字节 */
+var MAX_URL  = 199;
+var TARGET   = 'stations.tsv';
+
+/* ───────── 全局状态 ───────── */
+var S = {
+  page:'conv',
+  theme:'dark',
+  lang:'zh',
+  rows:[],        /* {name,url,cat,prov,err:[]} */
+  srcName:'',
+  enc:'',         /* 识别到的源编码 */
+  out:'',
+  opt:{ dedup:true, guess:true, std:false, hash:true, wrapc:false }
+};
+
+var I18N = {
+zh:{},
+  en:{}
+};
+
+/* 页面清单 */
+var PAGES = [
+  {id:'conv',  t:{zh:'转换台源',   en:'Convert'}},
+  {id:'check', t:{zh:'格式自检',   en:'Self-check'}},
+  {id:'use',   t:{zh:'使用方法',   en:'How to use'}},
+  {id:'faq',   t:{zh:'常见问题',   en:'FAQ'}},
+  {id:'disc',  t:{zh:'免责声明',   en:'Disclaimer'}},
+  {id:'about', t:{zh:'关于',       en:'About'}}
+];
+
+function L(k){ var t=I18N[S.lang]; return (t&&t[k]!==undefined)?t[k]:I18N.zh[k]; }
+function T(o){ return o ? (o[S.lang]||o.zh) : ''; }
+
+/* ══════════ 1. 编码识别与文本解码 ══════════
+   ⚠️ 国内 M3U 大量是 GBK。不识别就是一整片乱码，
+   而乱码台名会让分类推断全失效。 */
+var utf8Dec = new TextDecoder('utf-8',{fatal:true});
+function detectAndDecode(buf){
+  var u8 = new Uint8Array(buf);
+  /* BOM 优先 */
+  if(u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF)
+    return {enc:'UTF-8 (BOM)', text:new TextDecoder('utf-8').decode(u8), bom:true};
+  if(u8[0]===0xFF&&u8[1]===0xFE)
+    return {enc:'UTF-16 LE', text:new TextDecoder('utf-16le').decode(u8), bom:true};
+  if(u8[0]===0xFE&&u8[1]===0xFF)
+    return {enc:'UTF-16 BE', text:new TextDecoder('utf-16be').decode(u8), bom:true};
+  /* 严格 UTF-8？ */
+  try{ return {enc:'UTF-8', text:utf8Dec.decode(u8), bom:false}; }catch(e){}
+  /* 回落 GBK —— 宁可全角也不给乱码 */
+  try{ return {enc:'GBK / GB2312', text:new TextDecoder('gbk').decode(u8), bom:false}; }
+  catch(e){}
+  return {enc:'未知', text:new TextDecoder('utf-8').decode(u8), bom:false, bad:true};
+}
+
+/* ══════════ 2. 解析 ══════════
+   支持：标准 M3U(#EXTINF)、台名,URL / 台名 URL / 纯 URL 一行、
+        已是 stations.tsv（4 列 TAB）*/
+var EXTINF = /^#EXTINF\s*:\s*(-?\d+)\s*(?:,)?\s*(.*)$/i;
+
+/*★ 10-06修：从 #EXTINF 的参数串里正确取台名。
+  国内 M3U 极常见这一行：
+    #EXTINF:-1 tvg-id="" tvg-name="河南新闻广播" tvg-logo="....png" group-title="综合广播",河南新闻广播
+  逗号【前】全是 tvg-* 属性，逗号【后】才是显示名。
+  旧正则的 (.*)$ 把整串都当台名 ⇒ 屏上会出现
+    「tvg-id="" tvg-name="" tvg-logo="https://...」这种垃圾。
+  规则（按可靠度排序）：
+    ① tvg-name="..." 非空 → 用它
+    ② 最后一个逗号之后的非空段→ 用它
+    ③ 整串剥掉所有 key="value" 后剩下的非空 → 用它
+  顺手也把 tvg-name 里的逗号处理掉（有些源用逗号分隔多个名）。*/
+function extinfTitle(arg){
+  var s = String(arg||'');
+  /* ② 最后一个逗号之后 */
+  var k = s.lastIndexOf(',');
+  var tail = (k>=0 ? s.slice(k+1) : '').trim();
+  if(tail) return tail;
+  /* ① tvg-name */
+  var m = s.match(/tvg-name\s*=\s*"([^"]*)"/i) || s.match(/tvg-name\s*=\s*'([^']*)'/i);
+  if(m && m[1].trim()) return m[1].trim();
+  /* ③ 剥掉所有 key="value" */
+  var rest = s.replace(/\b[\w-]+\s*=\s*"[^"]*"/g,'')
+             .replace(/\b[\w-]+\s*=\s*'[^']*'/g,'').trim();
+  return rest;
+}
+
+function parseInput(text){
+  var lines = String(text).replace(/\r\n?/g,'\n').split('\n');
+  var out=[], pendingName=null, sawM3U=false;
+
+  for(var i=0;i<lines.length;i++){
+    var raw = lines[i];
+    var s = raw.replace(/^﻿/,'').trim();
+    if(!s) { pendingName=null; continue; }
+    if(s.charAt(0)==='#'){
+      var m = EXTINF.exec(s);
+      /* ★ 用 extinfTitle 剥掉 tvg-* 属性，不能直接用 m[2] */
+      if(m){ sawM3U=true; pendingName=extinfTitle(m[2])||null; }
+      else if(/^#EXTVLCOPT|^#EXTGRP|^#PLAYLIST:/i.test(s)){ /* 忽略 */ }
+      continue;                          /* 其它 # 指令忽略 */
+    }
+
+    var url = s, name = pendingName;
+    pendingName = null;
+
+    /* 已是 stations.tsv：4 列 TAB */
+    var t = s.split('\t');
+    if(t.length>=4 && /^https?:\/\//i.test(t[3].trim())){
+      out.push({name:t[0].trim(), url:t[3].trim(), cat:t[1].trim(), prov:t[2].trim()});
+      continue;
+    }
+    /* 一行两个字段 */
+    if(!name){
+      var sep = null;
+      var mm = s.match(/^([^,]{1,80}?)\s*,\s*(https?:\/\/\S+)$/i);
+      if(mm){ sep = 1; name = mm[1].trim(); url = mm[2].trim(); }
+      if(!sep){
+        mm = s.match(/^(\S.*?)\s+|\t\s+(https?:\/\/\S+)$/i);
+        if(mm && /https?:\/\//i.test(mm[0]) && mm[0].indexOf(mm[0].match(/https?:\/\/\S+$/i)[0])>0){
+          var u2 = mm[0].match(/https?:\/\/\S+$/i)[0];
+          name = mm[0].slice(0, mm[0].length-u2.length).replace(/[,\t]+$/,'').trim();
+          url = u2; sep = 1;
+        }
+      }
+    }
+    if(!/^https?:\/\//i.test(url)){
+      var u3 = s.match(/https?:\/\/\S+/i);          /* 行尾别的东西后面粘着 URL */
+      if(u3){ if(!name) name = s.replace(u3[0],'').trim(); url = u3[0]; }
+      else continue;                                 /* 这行没有 URL，丢 */
+    }
+    out.push({name:(name||'').trim(), url:url.trim(), cat:'', prov:''});
+  }
+  return {rows:out, m3u:sawM3U};
+}
+
+/* ══════════ 3. 自动推断：栏目 + 地区 ══════════ */
+var CAT_RULES = [
+  ['戏曲',   /(戏曲|京剧|越剧|黄梅戏|评剧|豫剧|昆曲|秦腔|蒲剧|晋剧|川剧|粤剧|黄龙戏|采茶戏|花鼓戏|大戏|戏台|梨园| Theater|Opera)/i],
+  ['说书',   /(评书|说书|相声|评话|故事会|曲艺|相声大会)/i],
+  ['怀旧老歌',/(怀旧|老歌|老唱片|金曲|经典老歌|怀旧金曲|岁月|往事|民国|老年代|记忆中的)/i],
+  ['宗教',   /(佛[教主光]?|基督教|福音|天主教|正教|新教|道观|道院|禅|法音|念佛|佛号|钟声|islam|quran|清真|寺钟)/i],
+  ['电视伴音',/(电视|伴音|CCTV|央视|卫视|台标音)/i],
+  ['交通台', /(交通|汽车|路况|飞驰|车友)/i],
+  ['教育台', /(教育|教学|学校|人文|园丁)/i],
+  ['境外新闻',/(国际新闻|国际台|国际广播电台|对外广播|国际在线|VOA|BBC|DW|Radio Free|RFI|环球|world news|China Radio International)/i],
+  ['音乐',   /(音乐|调频|流行|摇滚|爵士|轻音乐|古典|金属|民谣|电音|音乐台|Music|Radio.*FM)/i],
+  ['文艺',   /(文艺|艺术|综艺|娱乐|影视)/i],
+  ['网络台', /(网络广播|网络台|互联网广播|在线广播|数字广播)/i],
+  /* ★ 10-06 补：「XX人民广播电台」是【最常见的台名形态】。原来只列了
+     「中央人民广播电台」一家，于是「北京人民广播电台」「西藏人民广播电台」
+     全部落到兜底的「综合」—— 而「新闻综合」才是它们该去的栏目。
+     ⇒ 放宽成模式：任意前缀 + 人民广播电台。
+     ⚠ 位置放在最后两条新闻规则【之前】：这样更具体的「中国之声」优先，
+        泛化的「人民广播电台」兜底。若放到「电视伴音」之前会把
+        「XX广播电视台」误判成新闻综合（它该是电视伴音）。*/
+  ['新闻综合',/(人民广播电台|广播电视台)/i],
+  ['新闻综合',/(新闻|时政|新闻综合|综合广播|资讯|头条|中央人民广播电台|中国之声|中华之声|神州之声|国际新闻台)/i]
+];
+function guessCat(name, url){
+  var s = name + ' ' + (url||'');
+  /* 地区名误命中护栏：「花蓮」「佛山」不算宗教 */
+  if(/(花蓮|花莲|莲花|莲花山|佛山|凭祥|蒙自|义乌|和田)/.test(name) && !/佛教|佛光|法音|禅/.test(s))
+    s = s.replace(/(花蓮|花莲|莲花|莲花山|佛山|凭祥|蒙自|义乌|和田)/g,'　');
+  for(var i=0;i<CAT_RULES.length;i++){
+    if(CAT_RULES[i][1].test(s)) return CAT_RULES[i][0];
+  }
+  return '综合';
+}
+
+var PROV_ALIAS = {
+  /* ⚠️ 绝对不要把「中央人民」「央广」「CNR」写进北京的别名——
+     中央人民广播电台、中国之声是【全国台】，写进去会把全国台全判成北京。
+     全国台的正确做法是让它落到空值 → 导出为「全国」。*/
+  '北京':['北京','朝阳','海淀'],
+  '天津':['天津'],'河北':['河北','石家庄','唐山','保定','廊坊','邯郸','沧州','秦皇岛'],
+  '山西':['山西','太原','大同','长治','晋中','临汾','运城'],
+  '内蒙古':['内蒙古','呼伦贝尔','包头','赤峰','鄂尔多斯'],
+  '辽宁':['辽宁','沈阳','大连','鞍山','抚顺','锦州','营口'],
+  '吉林':['吉林','长春','延边','四平'],
+  '黑龙江':['黑龙江','哈尔滨','齐齐哈尔','大庆','牡丹江'],
+  '上海':['上海','东方明珠','浦东'],
+  '江苏':['江苏','南京','苏州','无锡','常州','南通','徐州','扬州','盐城','泰州','宿迁','镇江','淮安','连云港'],
+  '浙江':['浙江','杭州','宁波','温州','绍兴','嘉兴','湖州','金华','衢州','台州','丽水','舟山','义乌'],
+  '安徽':['安徽','合肥','芜湖','蚌埠','安庆','马鞍山','滁州'],
+  '福建':['福建','福州','厦门','泉州','漳州','莆田','宁德','三明'],
+  '江西':['江西','南昌','九江','赣州','吉安','上饶','抚州'],
+  '山东':['山东','济南','青岛','烟台','潍坊','临沂','淄博','济宁','威海','泰安','德州','聊城','菏泽'],
+  '河南':['河南','郑州','洛阳','开封','南阳','许昌','新乡','安阳','商丘','信阳','周口','平顶山','三门峡'],
+  '湖北':['湖北','武汉','宜昌','襄阳','荆州','黄石','十堰','孝感'],
+  '湖南':['湖南','长沙','株洲','湘潭','衡阳','岳阳','常德','郴州','怀化'],
+  '广东':['广东','广州','深圳','东莞','佛山','珠海','惠州','汕头','湛江','中山','江门','肇庆'],
+  '广西':['广西','南宁','柳州','桂林','梧州','北海','玉林','钦州'],
+  '海南':['海南','海口','三亚','儋州'],
+  '重庆':['重庆'],'四川':['四川','成都','绵阳','德阳','宜宾','泸州','南充','乐山','自贡'],
+  '贵州':['贵州','贵阳','遵义','安顺','六盘水'],
+  '云南':['云南','昆明','曲靖','玉溪','大理','红河'],
+  '西藏':['西藏','拉萨'],
+  '陕西':['陕西','西安','宝鸡','咸阳','渭南','榆林','汉中'],
+  '甘肃':['甘肃','兰州','天水','白银','酒泉'],
+  '青海':['青海','西宁'],
+  '宁夏':['宁夏','银川'],
+  '新疆':['新疆','乌鲁木齐','喀什','伊犁','克拉玛依']
+};
+/* ⚠️ 长名优先匹配（插入顺序即优先级）：
+   三门峡 必须排在 三门 之前、黑龙江 排在 龙江 之前。
+   ★ 但也不能只靠长度——「吉林市」与「吉林」同长，必须让带「市/广播/电台」
+     这类完整词的条目整体优先。用「长名 + 完整词」双重排序。 */
+var PROV_KEYS = (function(){
+  var arr=[];
+  for(var p in PROV_ALIAS) PROV_ALIAS[p].forEach(function(k){
+    if(k!==p) arr.push([p,k]);
+  });
+  arr.sort(function(a,b){
+    var d = b[1].length - a[1].length;      /* 长名先 */
+    if(d) return d;
+    return a[0].localeCompare(b[0]);        /* 同长则按省名稳定排序 */
+  });
+  return arr;
+})();
+/* ★ 全国台名单：这些台不属于任何省级地区，必须返回空 → 导出为「全国」。
+   判错的代价很直观：把中国之声显示成「北京台」，用户一眼就看出错了。*/
+var NATIONAL_HINT = /(中央人民|中国之声|中华之声|神州之声|央广|中央广播|中央电视|央视|CCTV|中国教育|中国交通广播|国家广播|国际新闻台|环球广播|中国之声|中央人民广播电台)/;
+function guessProv(name){
+  if(NATIONAL_HINT.test(name)) return '';
+  var s = name;
+  for(var i=0;i<PROV_KEYS.length;i++){
+    if(s.indexOf(PROV_KEYS[i][1])>=0) return PROV_KEYS[i][0];
+  }
+  for(var p in PROV_ALIAS){                       /* 省级名本身 */
+    if(s.indexOf(p)>=0) return p;
+  }
+  return '';
+}
+
+/* ══════════ 4. 规范化 + 校验 ══════════ */
+function utf8len(s){ return new TextEncoder().encode(String(s)).length; }
+function hasCtrl(s){ return /[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(s); }
+
+function normalize(){
+  var seenU={}, seenN={}, keep=[];
+  S.rows.forEach(function(r){
+    var e=[];
+    r.cat  = String(r.cat||'').trim();
+    r.prov = String(r.prov||'').trim();
+    r.name = String(r.name||'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').trim();
+    r.url  = String(r.url||'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').trim();
+
+    if(!r.name){
+      /* 没台名：用域名+末段文件名兜底，别留空行 */
+      var m = r.url.match(/^https?:\/\/([^\/]+)(?:\/(.*))?$/i);
+      var host = m?m[1]:'未知';
+      var tail = (m&&m[2])? m[2].split(/[\/\?#]/).pop() : '';
+      r.name = tail.replace(/\.[a-z0-9]{2,5}$/i,'').replace(/[_\-\+]/g,' ').trim();
+      if(!r.name) r.name = host;
+      e.push('auto-name');
+    }
+    if(utf8len(r.name) > MAX_NAME) e.push('name-long');
+    if(/[\t]/.test(r.name)) e.push('name-tab');
+    if(hasCtrl(r.name)) e.push('name-ctrl');
+    if(!/^https?:\/\//i.test(r.url)) e.push('url-bad');
+    if(utf8len(r.url) > MAX_URL) e.push('url-long');
+    if(CATS.indexOf(r.cat)<0)   { if(r.cat) e.push('cat-unknown'); r.cat = r.cat||'综合'; }
+    if(PROVS.indexOf(r.prov)<0 && SPECIAL_PROV.indexOf(r.prov)<0){
+      if(r.prov) e.push('prov-unknown'); r.prov = r.prov||'';
+    }
+    if(S.opt.dedup){
+      if(seenU[r.url]!==undefined)  { e.push('dup-url'); }
+      if(seenN[r.name]!==undefined){ e.push('dup-name'); }
+    }
+    r.err = e;
+    if(!e.length || e.indexOf('auto-name')<0 || e.length===1){
+      seenU[r.url]=1; seenN[r.name]=1;
+    }
+    keep.push(r);
+  });
+
+  /* 纯重复的直接丢，只留提示 */
+  S.rows = S.opt.dedup
+    ? keep.filter(function(r){ return r.err.indexOf('dup-url')<0 && r.err.indexOf('dup-name')<0; })
+    : keep;
+}
+
+/* ══════════ 5. 生成 TSV（★ 无 BOM / 强制 LF / 单 TAB） ══════════ */
+function buildTsv(){
+  var out = [];
+  /* ★ 10-06：原来这里写 4 行说明性注释。改成【只留一行】标记。
+     理由：数据文件混进说明文字，使用者手工编辑时容易误改；
+     而固件读取器本来就跳过 # 开头行，留一行足够标识格式。
+     详细格式见《台源文件格式规格.md》与随包的 README。*/
+  out.push('# 拾声台源stations.tsv  共 ' + S.rows.length + ' 台');
+  S.rows.forEach(function(r){
+    var name = r.name.replace(/[\t\n]/g,' ');
+    var cat  = CATS.indexOf(r.cat)>=0 ? r.cat : '综合';
+    var prov = (PROVS.indexOf(r.prov)>=0) ? r.prov
+             : (SPECIAL_PROV.indexOf(r.prov)>=0 ? r.prov : '其他');
+    out.push(name + '\t' + cat + '\t' + prov + '\t' + r.url);
+  });
+  return out.join('\n');      /* ⚠️ 只用 \n，绝不 \r\n */
+}
+
+function buildExample(){
+  var L=[];
+  L.push('# 拾声台源文件格式示例  stations.example.tsv');
+  L.push('#');
+  L.push('# 每一行一个电台，四个字段用【制表符 Tab】分隔，顺序固定：');
+  L.push('#   台名<TAB>栏目<TAB>地区<TAB>播放地址URL');
+  L.push('#');
+  L.push('# 硬性要求：');
+  L.push('#   · 编码 UTF-8 【无 BOM】（带 BOM 会让第一个台名多一个方块）');
+  L.push('#   · 换行 LF（不要 CRLF，会让 URL 尾部挂个看不见的 CR 字符）');
+  L.push('#   · 字段之间必须是 Tab，不是空格');
+  L.push('#   · 最多 2000 台');
+  L.push('#   · # 开头的行是注释，会被忽略');
+  L.push('#');
+  L.push('# 放到 TF 卡【根目录】，文件名必须是 stations.tsv，插卡开机即自动读取。');
+  L.push('# 没有卡 / 文件读不出 / 格式不对，机器都不会白屏，只是保持 0 台。');
+  L.push('#');
+  L.push('# ★ 下面的地址是【占位示例】，播不出声音。请换成你自己 M3U 里的真实地址。');
+  L.push('#   栏目与地区取值见 README：栏目 13 种、地区 42 种（留空即全国台）。');
+  L.push('');
+  L.push('# ── 新闻综合 ──');
+  L.push('示例新闻广播\t新闻综合\t全国\thttp://example.com/radio/news.mp3');
+  L.push('示例之声\t新闻综合\t北京\thttp://example.com/radio/voice.mp3');
+  L.push('');
+  L.push('# ── 交通台 ──');
+  L.push('示例交通广播\t交通台\t江苏\thttp://example.com/radio/traffic.mp3');
+  L.push('');
+  L.push('# ── 音乐 ──');
+  L.push('示例音乐台\t音乐\t全国\thttp://example.com/radio/music.mp3');
+  L.push('');
+  L.push('# ── HLS 直播（m3u8）也可以 ──');
+  L.push('示例直播台\t新闻综合\t广东\thttps://example.com/live/stream.m3u8');
+  L.push('');
+  L.push('# ── 地区可留空（= 全国台），栏目按最接近的填 ──');
+  L.push('示例乡镇广播\t综合\t\thttp://example.com/radio/local.mp3');
+  return L.join('\n');      /* ⚠️ 只用 \n，绝不 \r\n */
+}
+
+/* ══════════ 6. 自检清单 ══════════ */
+function selfCheck(){
+  var r=[], hard=[], soft=[];
+  var n = S.rows.length;
+
+  if(!n){ r.push(['warn','还没有解析到任何电台。先在上面粘贴或拖入一个 M3U / 文本台单。']); return r; }
+
+  /* 名字 */
+  var badName=S.rows.filter(function(x){return x.err.indexOf('name-long')>=0||x.err.indexOf('name-tab')>=0;});
+  if(badName.length) hard.push('有 <code>'+badName.length+'</code> 行台名超 '+MAX_NAME+' 字节或含 TAB —— 这些行导出会乱，固件读不了。');
+
+  /* URL */
+  var badUrl=S.rows.filter(function(x){return x.err.indexOf('url-bad')>=0;});
+  var longUrl=S.rows.filter(function(x){return x.err.indexOf('url-long')>=0;});
+  if(badUrl.length) hard.push('有 <code>'+badUrl.length+'</code> 行地址不是 http/https 开头，已保留但请检查。');
+  if(longUrl.length) hard.push('有 <code>'+longUrl.length+'</code> 行地址超 '+MAX_URL+' 字节，超出固件字段上限。');
+
+  /* 栏目/地区不认识 */
+  var badCat=S.rows.filter(function(x){return x.err.indexOf('cat-unknown')>=0;});
+  var badProv=S.rows.filter(function(x){return x.err.indexOf('prov-unknown')>=0;});
+  if(badCat.length) hard.push('有 <code>'+badCat.length+'</code> 行栏目不是 13 个标准名之一，固件会归到「综合」。');
+  if(badProv.length) hard.push('有 <code>'+badProv.length+'</code> 行地区不是 42 个标准名之一，固件会归到「其他」。');
+
+  /* 数量 */
+  if(n>MAX_N) hard.push('解析出 <code>'+n+'</code> 台，超过固件上限 <code>'+MAX_N+'</code> 台，导入会被拒绝。');
+  else if(n>MAX_N*0.8) soft.push('已经 <code>'+n+'</code> 台，接近上限 '+MAX_N+' 台。');
+
+  /* 协议统计 */
+  var hls=S.rows.filter(function(x){return /\.m3u8(\?|$)/i.test(x.url);}).length;
+  var http=S.rows.filter(function(x){return /^http:/i.test(x.url);}).length;
+  var https=S.rows.length-http;
+  soft.push('协议分布：<code>http '+http+'</code> ／ <code>https '+https+'</code>，其中 <code>HLS(m3u8) '+hls+'</code> 条。');
+  if(hls) soft.push('HLS 台在拾声固件上可以播，但更吃流量和内存；<b>自己验证一遍</b>再当成常用台。');
+
+  /* 可疑地址 */
+  var q = S.rows.filter(function(x){return /\?wsSession=|&wsIPSercert=|token=|sessionid=/i.test(x.url);});
+  if(q.length) soft.push('有 <code>'+q.length+'</code> 条地址带签名参数（wsSession 等），<b>这类链接会过期</b>，属于一次性源。');
+  var demo = S.rows.filter(function(x){return /example\.com|localhost|127\.0\.0\.1|test\.|\/test$|your[-_]?url/i.test(x.url);});
+  if(demo.length) soft.push('有 <code>'+demo.length+'</code> 条地址看着像示例或本机地址，导入后是播不出来的。');
+
+  /* 字库提示 */
+  soft.push('导入后台名若含生僻字，界面可能显示 □ 方块。这取决于固件台名字库是否已补齐 GB2312 一级字。');
+
+  if(!hard.length) r.push(['pass','硬性检查全部通过：' + n + ' 台，台名、地址、栏目、地区都在合法范围内。']);
+  hard.forEach(function(h){ r.push(['err',h]); });
+  soft.forEach(function(s){ r.push(['warn',s]); });
+  return r;
+}
+
+/* ══════════ 7. 渲染 ══════════ */
+function esc(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function viewConv(){
+  var h='';
+  h += '<div class="card">';
+  h += '<h2>① 放入台单</h2>';
+  h += '<p class="hint">把你下载的 M3U 或文本台单拖进来，或直接粘贴。'
+     + '<b>UTF-8 / GBK / UTF-16 会自动识别</b>，不用自己转码。</p>';
+  h += '<div id="drop"><div class="big">把 M3U / TXT 拖到这里</div>'
+     + '<div class="sm2">或点这一块选文件 · 也可以直接往下面粘贴</div></div>';
+  h += '<input type="file" id="file" accept=".m3u,.m3u8,.txt,.csv,.tsv,.pls" multiple style="display:none">';
+  h += '<div class="row"><label style="flex:1 1 240px">或粘贴内容：</label></div>';
+  h += '<textarea id="ta" placeholder="#EXTM3U&#10;#EXTINF:-1,示例新闻广播&#10;http://example.com/radio/news.mp3&#10;&#10;或者一行一个：&#10;示例交通广播,http://example.com/radio/traffic.mp3"></textarea>';
+  h += '<div class="row">'
+     + '<button class="btn pri" id="btnParse">解析</button>'
+     + '<button class="btn" id="btnSample">载入示例台单</button>'
+     + '<button class="btn" id="btnClear">清空</button>';
+  if(S.srcName) h += '<span class="hint" style="margin:0">当前：<b>'+esc(S.srcName)+'</b>'+(S.enc?'（识别为 '+esc(S.enc)+'）':'')+'</span>';
+  h += '</div></div>';
+
+  if(!S.rows.length){
+    h += '<div class="card"><div class="empty">还没有电台。'
+       + '上面放一个 M3U 进来，或点「载入示例台单」先看看效果。</div></div>';
+    return h;
+  }
+
+  /* 统计 */
+  var hls=S.rows.filter(function(x){return /\.m3u8(\?|$)/i.test(x.url);}).length;
+  var withName=S.rows.filter(function(x){return x.err.indexOf('auto-name')<0;}).length;
+  var bad=S.rows.filter(function(x){
+    return x.err.some(function(e){return ['name-long','name-tab','url-bad','url-long','cat-unknown','prov-unknown'].indexOf(e)>=0;});
+  }).length;
+  h += '<div class="card"><h2>② 解析结果</h2>';
+  h += '<div class="stats">';
+  h += '<div class="st ok"><b>'+S.rows.length+'</b><span>电台总数</span></div>';
+  h += '<div class="st"><b>'+withName+'</b><span>台名可用</span></div>';
+  h += '<div class="st"><b>'+hls+'</b><span>HLS 流</span></div>';
+  h += '<div class="st '+(bad?'bad':'ok')+'"><b>'+bad+'</b><span>需修正</span></div>';
+  h += '<div class="st"><b>'+(MAX_N-S.rows.length>0?MAX_N-S.rows.length:0)+'</b><span>余量（上限'+MAX_N+'）</span></div>';
+  h += '</div>';
+
+  h += '<div class="row"><label>全表栏目改为：</label></div>';
+  h += '<div class="chips c1" id="catChips">';
+  h += '<div class="chip" data-cat="">（不改）</div>';
+  CATS.forEach(function(c){ h += '<div class="chip" data-cat="'+esc(c)+'">'+esc(c)+'</div>'; });
+  h += '</div>';
+  h += '<div class="row"><label>全表地区改为：</label></div>';
+  h += '<div class="chips c2" id="provChips">';
+  h += '<div class="chip" data-prov="">（不改）</div>';
+  ['全国','其他'].concat(PROVS_CN).concat(PROVS_XW).forEach(function(p){
+    h += '<div class="chip" data-prov="'+esc(p)+'">'+esc(p)+'</div>';
+  });
+  h += '</div>';
+  h += '</div>';
+
+  /* 表格 */
+  h += '<div class="card"><h2>③ 逐条校对</h2>';
+  h += '<p class="hint">每行都能改。改动即时生效，改完直接导出就是最终文件。</p>';
+  h += '<div id="tblBox"><table><thead><tr>'
+     + '<th style="width:36px">#</th><th>台名</th><th>栏目</th><th>地区</th><th>URL</th><th style="width:64px">标记</th>'
+     + '</tr></thead><tbody>';
+  var LIM = 800;
+  S.rows.slice(0,LIM).forEach(function(r,i){
+    var tags='';
+    if(r.err.indexOf('auto-name')>=0) tags += '<span class="tag w">自动命名</span> ';
+    if(r.err.indexOf('name-long')>=0||r.err.indexOf('name-tab')>=0) tags += '<span class="tag x">台名</span> ';
+    if(r.err.indexOf('url-bad')>=0) tags += '<span class="tag x">地址</span> ';
+    if(r.err.indexOf('url-long')>=0) tags += '<span class="tag x">超长</span> ';
+    if(r.err.indexOf('cat-unknown')>=0) tags += '<span class="tag w">栏目</span> ';
+    if(r.err.indexOf('prov-unknown')>=0) tags += '<span class="tag w">地区</span> ';
+    var rowCls = tags.indexOf('tag x')>=0 ? ' class="err"' : '';
+    h += '<tr'+rowCls+'>';
+    h += '<td class="s">'+(i+1)+'</td>';
+    h += '<td class="nm"><input class="cel" data-i="'+i+'" data-f="name" value="'+esc(r.name)+'"></td>';
+    h += '<td class="s"><select class="sel" data-i="'+i+'" data-f="cat">';
+    CATS.forEach(function(c){
+      h += '<option'+(r.cat===c?' selected':'')+'>'+esc(c)+'</option>';
+    });
+    h += '</select></td>';
+    h += '<td class="s"><select class="sel" data-i="'+i+'" data-f="prov"><option value=""></option>';
+    ['全国','其他'].concat(PROVS).forEach(function(p){
+      h += '<option'+(r.prov===p?' selected':'')+'>'+esc(p)+'</option>';
+    });
+    h += '</select></td>';
+    h += '<td class="u"><input class="cel" data-i="'+i+'" data-f="url" value="'+esc(r.url)+'" style="font:12px Consolas,monospace"></td>';
+    h += '<td class="s">'+tags+'</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  if(S.rows.length>LIM){
+    h += '<p class="hint" style="margin-top:9px">⚠️ 只显示前 '+LIM+' 行（共 '+S.rows.length+' 行）。'
+       + '全部 '+LIM+' 行之后的内容仍会照常导出。</p>';
+  }
+  h += '<div class="row"><label class="chk"><input type="checkbox" id="optDedup"'+(S.opt.dedup?' checked':'')+'>导出前去掉重复</label>'
+     + '<label class="chk"><input type="checkbox" id="optGuess"'+(S.opt.guess?' checked':'')+'>空栏目按台名自动推断</label></div>';
+  h += '</div>';
+
+  /* 导出 */
+  h += '<div class="card"><h2>④ 导出</h2>';
+  h += '<p class="hint">文件名 <b>'+TARGET+'</b>，存到 SD 卡<b>根目录</b>。'
+     + '已强制：UTF-8 无 BOM、LF 换行、TAB 分隔 —— 固件读这三样最挑。</p>';
+  h += '<div class="row">'
+     + '<button class="btn pri" id="btnDl">下载 '+TARGET+'</button>'
+     + '<button class="btn" id="btnCopy">复制全文</button>'
+     + '<button class="btn" id="btnEx">下载示例文件</button>'
+     + '</div>';
+  h += '<pre id="outBox">'+(S.out?esc(S.out):'（点上面任一按钮生成预览）')+'</pre>';
+  h += '<div class="hint">共 '+S.rows.length+' 行 · '+new Blob([S.out||'']).size+' 字节</div>';
+  h += '</div>';
+
+  return h;
+}
+
+function viewCheck(){
+  var h='<div class="card"><h2>格式自检</h2>';
+  h += '<p class="hint">按《拾声台源文件格式规格 v1》逐条核对。<b>「硬性」不通过就导不出能用的文件。</b></p>';
+  if(!S.rows.length){
+    h += '<div class="empty">还没有电台可检。先去「转换台源」解析一个台单。</div></div>';
+    return h;
+  }
+  var r=selfCheck();
+  h += '<ul id="chkList">';
+  r.forEach(function(x){
+    var mark = x[0]==='pass' ? '✔' : (x[0]==='err' ? '✘' : '⚠');
+    h += '<li class="'+x[0]+'"><span>'+mark+'</span><span>'+x[1]+'</span></li>';
+  });
+  h += '</ul>';
+
+  h += '<h3>规格速查</h3><table><tbody>'
+     + '<tr><th>路径</th><td>/sdcard/'+TARGET+'（根目录）</td></tr>'
+     + '<tr><th>编码</th><td>UTF-8，<b>无 BOM</b></td></tr>'
+     + '<tr><th>换行</th><td>LF（\\n），<b>不能是 CRLF</b></td></tr>'
+     + '<tr><th>分隔</th><td>TAB，一个</td></tr>'
+     + '<tr><th>列序</th><td>台名 · 栏目 · 地区 · URL</td></tr>'
+     + '<tr><th>上限</th><td>'+MAX_N+' 台</td></tr>'
+     + '<tr><th>台名上限</th><td>'+MAX_NAME+' 字节（UTF-8）</td></tr>'
+     + '<tr><th>URL 上限</th><td>'+MAX_URL+' 字节</td></tr>'
+     + '<tr><th>注释</th><td>以 <code>#</code> 开头整行跳过；空行跳过</td></tr>'
+     + '<tr><th>栏目</th><td>13 个标准名，对不上归「综合」</td></tr>'
+     + '<tr><th>地区</th><td>42 个标准名，或「全国」「其他」→ 无归属</td></tr>'
+     + '</tbody></table>';
+  h += '</div>';
+  return h;
+}
+
+function viewUse(){
+  return '<div class="card doc"><h2>使用方法</h2>'
+   + '<h3>一、转换（电脑上）</h3>'
+   + '<ol>'
+   + '<li>找到你的台单文件（<code>.m3u</code> 或 <code>.txt</code>）。常见的来源是别人的分享链接、Gitee/GitHub 上的台单仓库。</li>'
+   + '<li>把它<b>拖进本页上方那块区域</b>，或直接粘贴内容。UTF-8／GBK／UTF-16 会自动认，不用先转码。</li>'
+   + '<li>看一眼解析结果。台名缺失的会自动用域名或文件名兜底，标「自动命名」。</li>'
+   + '<li>校对。表格里每一格都能改；<b>栏目</b>和<b>地区</b>可以用上面的 chips 一次性改全表。</li>'
+   + '<li>点<b>「自检」</b>页确认没有硬性问题。</li>'
+   + '<li>点<b>「下载 stations.tsv」</b>。</li>'
+   + '</ol>'
+   + '<h3>二、放进机器（SD 卡）</h3>'
+   + '<ol>'
+   + '<li>把 <code>stations.tsv</code> 拷到 SD 卡<b>根目录</b>，别放文件夹里。</li>'
+   + '<li>⚠️ 插卡前先确认<b>机器已关机</b>；带电插拔有损坏卡的风险。</li>'
+   + '<li>⚠️ 板载 Type-C <b>不能当 USB 主机用</b>，插电脑读卡这条路走不通。请用读卡器插电脑，或直接把卡插进机器。</li>'
+   + '</ol>'
+   + '<h3>三、在机器上导入</h3>'
+   + '<ol>'
+   + '<li>开机 →<b>设置</b> → 找<b>「导入台单」</b>一行。</li>'
+   + '<li>显示「已导入 N 台」就成了。同一行会变成<b>「恢复内置台单」</b>，点它可以退回自带的 1254 台。</li>'
+   + '</ol>'
+   + '<h3>四、两个必须知道的坑</h3>'
+   + '<ul>'
+   + '<li>⚠️ <b>文件不能有 BOM</b>。用记事本另存的 UTF-8 默认带 BOM，会让第一个台名变成「□中央人民广播电台」，收藏也永远存不上。</li>'
+   + '<li>⚠️ <b>换行必须是 LF</b>。Windows 上很多工具写出 CRLF，地址尾部会挂一个看不见的字符，台就播不出来。</li>'
+   + '</ul>'
+   + '<p>本页生成的这两样都已经处理掉了，直接用下载来的文件就行。</p>'
+   + '</div>';
+}
+
+function viewFaq(){
+  var faqs = (S.lang==='zh') ? [
+   ['台名全是乱码怎么办？',
+    '正常不会。本页自动识别 UTF-8／GBK／UTF-16。如果还是乱码，说明源文件本身就用了别的编码（比如 Big5）—— 把它用记事本另存为 UTF-8，再拖进来。'],
+   ['有些台显示「需修正」，还能导吗？',
+    '能导，但要弄清是哪一类。<b>地址不是 http 开头</b>和<b>台名超长</b>会真的坏事；<b>栏目／地区对不上</b>只是会被固件归到「综合」或「其他」，不影响播放。'],
+   ['为什么不做「在线验活」？',
+    '因为网页受跨域限制，对绝大多数第三方流都探不到，<b>给出「可播」的假结论比不给更糟</b>——用户导入完发现一半播不了，会怪到固件头上。所以这里只保证格式对、地址合法，能不能播由机器说话。'],
+   ['HLS（.m3u8）的台能导吗？',
+    '能，固件支持。但 HLS 更吃流量和内存，建议自己先在机器上试播几个常用的，再决定留哪些。'],
+   ['带 wsSession 这种签名地址怎么办？',
+    '这类链接<b>会过期</b>，属于一次性源，导入后过阵子就播不出来。本页会把它标出来，别当成长期台单。'],
+   ['上限 2000 台是怎么来的？',
+    '固件侧台单放 PSRAM（ESP32-S3 的 8 MB 里给台单分了约 200 KB 预算）。2000 台是留了余量后的数。再多机器装不下，导入会被直接拒绝。'],
+   ['导入了以后原来的收藏还在吗？',
+    '在。收藏和历史存的是<b>台名不是序号</b>，开机重解析台单。所以同一个台的内置版和导入版能对上，不会指错。'],
+   ['台单文件能放子目录吗？',
+    '不能，必须在 SD 卡根目录，而且文件名就是 stations.tsv。固件只认这一个路径。'],
+   ['能转多份吗？',
+    '一次转一份。想要多套就分多次导 —— 固件目前只读根目录那一个 stations.tsv。']
+  ] : [
+   ['Station names all garbled?',
+    'Normally not. This page auto-detects UTF-8 / GBK / UTF-16. If it is still garbled, the source uses another encoding (e.g. Big5) — re-save it as UTF-8 and drop it in again.'],
+   ['Rows flagged "needs fix" — can I still export?',
+    'Yes, but check which kind. A URL not starting with http, or an over-long name, actually breaks things. An unknown category/region only falls back to "General" / "Other" and does not affect playback.'],
+   ['Why is there no online liveness check?',
+    'Because a web page is cross-origin restricted and cannot probe most third-party streams. A false "playable" verdict is worse than none — the user would blame the firmware. Here we only guarantee the format is correct; the device decides what actually plays.'],
+   ['Can I import HLS (.m3u8) stations?',
+    'Yes, the firmware supports it. But HLS costs more bandwidth and memory. Try a few on the device first before committing them to the list.'],
+   ['What about signed URLs with wsSession?',
+    'They expire. They are one-shot sources and will stop playing after a while. This page flags them so you do not treat them as a permanent list.'],
+   ['Where does the 2000-station limit come from?',
+    'The station list lives in PSRAM (about 200 KB of the ESP32-S3\'s 8 MB is budgeted for it). 2000 is the number left after headroom. Beyond that the device cannot hold it and import is rejected.'],
+   ['Will my favourites survive an import?',
+    'Yes. Favourites and history store the station NAME, not the index, and are re-resolved at boot. So the built-in and imported version of the same station match up correctly.'],
+   ['Can the file live in a subfolder?',
+    'No. It must be stations.tsv in the SD card root. The firmware looks at exactly that path.'],
+   ['Can I convert several lists?',
+    'One list per pass. The firmware reads the single /stations.tsv in the card root.']
+  ];
+  var h='<div class="card doc"><h2>常见问题</h2>';
+  faqs.forEach(function(f,i){
+    h += '<h3>'+(i+1)+'. '+esc(f[0])+'</h3><p>'+f[1]+'</p>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function viewDisc(){
+  return '<div class="card doc"><h2>免责声明</h2>'
+   + '<p>本工具是<a href="#" data-x="1">「拾声」硬件版</a>的配套小工具，是<strong>非官方第三方工具</strong>，'
+   + '与任何电台、电视台、平台、机构无任何关联，也不代表它们的立场。</p>'
+   + '<ul>'
+   + '<li>本工具只做<b>文本格式转换</b>，不收录、不提供、不代理任何电台地址。用户导入什么由用户自己决定。</li>'
+   + '<li>所有数据<b>只在本机浏览器里处理</b>，不上传任何服务器、不做统计。</li>'
+   + '<li>本工具<b>不检测电台是否可用</b>。转换成功不代表能听，地址失效属常态。</li>'
+   + '<li>请<b>只收听你所在国家/地区法律允许接收</b>的电台。使用者须自行遵守当地法规。</li>'
+   + '<li>按「风险自负」原则使用。工具作者不对任何间接损失承担责任。</li>'
+   + '<li>所有电台名称、频率、节目内容的<b>权利归各自权利人所有</b>。商标归各自商标所有人。</li>'
+   + '</ul>'
+   + '<p style="color:var(--tx2);font-size:13px;margin-top:14px">可自由使用、原样转发，请保留署名。'
+   + '若要改动，请只留给自己看，改过的版本不要对外分发。© 永远的兰兰（Lanlan Eternal）。保留所有权利。</p>'
+   + '</div>';
+}
+
+function viewAbout(){
+  return '<div class="card doc"><h2>关于</h2>'
+   + '<p><b>拾声 · 台源转换器</b>（XianForge）是「拾声」硬件版的配套工具，'
+   + '把你在网上找到的 M3U / 文本台单，转成这台机器能读的格式。</p>'
+   + '<h3>为什么要有它</h3>'
+   + '<p>拾声硬件版的固件里，自带的电台是编译进去的常量。'
+   + '想让机器放自己的台，只有把台单存成文件、由机器运行时去读这一条路。'
+   + '这个工具就是那条路的前半截 —— 后半截在固件里。</p>'
+   + '<h3>它不做什么</h3>'
+   + '<ul>'
+   + '<li>不收录电台、不提供电台地址，<b>不碰版权内容</b>。</li>'
+   + '<li>不联网检测电台是否可用（网页跨域限制，给不出可信结论）。</li>'
+   + '<li>不安装、不改系统，双击就能用。</li>'
+   + '</ul>'
+   + '<h3>技术要点</h3>'
+   + '<ul>'
+   + '<li>单文件 HTML，<b>零外部依赖</b>，双击即用、可离线。</li>'
+   + '<li>UTF-8 / GBK / UTF-16 自动识别。</li>'
+   + '<li>强制导出 <b>UTF-8 无 BOM + LF 换行</b> —— 这两样是固件最容易读错的地方。</li>'
+   + '<li>格式契约：<code>拾声硬件版-台源文件格式规格.md v1</code>，转换器与固件共用同一份约定。</li>'
+   + '</ul>'
+   + '<div class="sig" style="text-align:left;margin-top:20px">'
+   + '拾声 · 台源转换器 v1.0<br>© 永远的兰兰（Lanlan Eternal）</div>'
+   + '</div>';
+}
+
+/* ══════════ 8. 渲染主控 ══════════ */
+function render(){
+  var nav='';
+  PAGES.forEach(function(p){
+    nav += '<button data-page="'+p.id+'"'+(S.page===p.id?' class="on"':'')+'>'+esc(T(p.t))+'</button>';
+  });
+  document.getElementById('nav').innerHTML = nav;
+
+  var m='';
+  if(S.page==='conv')       m=viewConv();
+  else if(S.page==='check') m=viewCheck();
+  else if(S.page==='use')   m=viewUse();
+  else if(S.page==='faq')   m=viewFaq();
+  else if(S.page==='disc')  m=viewDisc();
+  else if(S.page==='about') m=viewAbout();
+  document.getElementById('main').innerHTML = m;
+
+  if(S.page==='conv') bindConv();
+  document.getElementById('btnEn').textContent = (S.lang==='zh'?'EN':'中');
+  document.getElementById('btnEn').classList.toggle('on', S.lang==='en');
+  document.getElementById('sigLine').innerHTML =
+    (S.lang==='zh'?'© 永远的兰兰（Lanlan Eternal）':'© Lanlan Eternal');
+}
+
+function refresh(){
+  if(S.opt.guess){
+    S.rows.forEach(function(r){
+      if(!r.cat) r.cat = guessCat(r.name, r.url);
+      if(!r.prov) r.prov = guessProv(r.name) || '全国';
+    });
+  }
+  normalize();
+  S.out = buildTsv();
+  render();
+}
+
+/* ══════════ 9. 事件 ══════════ */
+function bindConv(){
+  var drop = document.getElementById('drop');
+  var file = document.getElementById('file');
+  var ta   = document.getElementById('ta');
+  if(!drop) return;
+
+  drop.addEventListener('click', function(){ file.click(); });
+  file.addEventListener('change', function(e){
+    readFiles(Array.prototype.slice.call(e.target.files||[]));
+  });
+  ['dragenter','dragover'].forEach(function(ev){
+    drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('hot'); });
+  });
+  ['dragleave','drop'].forEach(function(ev){
+    drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('hot'); });
+  });
+  drop.addEventListener('drop', function(e){
+    var fs = e.dataTransfer && e.dataTransfer.files
+           ? Array.prototype.slice.call(e.dataTransfer.files) : [];
+    readFiles(fs);
+  });
+
+  var bp = document.getElementById('btnParse');
+  if(bp) bp.addEventListener('click', function(){
+    ingestText(ta.value, '手工粘贴');
+  });
+  var bs = document.getElementById('btnSample');
+  if(bs) bs.addEventListener('click', function(){
+    ingestText(SAMPLE_M3U, '内置示例');
+  });
+  var bc = document.getElementById('btnClear');
+  if(bc) bc.addEventListener('click', function(){
+    S.rows=[]; S.out=''; S.srcName=''; S.enc=''; render();
+  });
+
+  var catC = document.getElementById('catChips');
+  if(catC) catC.addEventListener('click', function(e){
+    var c = e.target.getAttribute && e.target.getAttribute('data-cat');
+    if(c===null || c===undefined) return;
+    var on = e.target.classList.contains('on');
+    Array.prototype.forEach.call(catC.children, function(x){ x.classList.remove('on'); });
+    if(on) return;
+    e.target.classList.add('on');
+    S.rows.forEach(function(r){ r.cat = c; });
+    normalize(); S.out = buildTsv(); render();
+  });
+  var prC = document.getElementById('provChips');
+  if(prC) prC.addEventListener('click', function(e){
+    var p = e.target.getAttribute && e.target.getAttribute('data-prov');
+    if(p===null || p===undefined) return;
+    var on = e.target.classList.contains('on');
+    Array.prototype.forEach.call(prC.children, function(x){ x.classList.remove('on'); });
+    if(on) return;
+    e.target.classList.add('on');
+    S.rows.forEach(function(r){ r.prov = p; });
+    normalize(); S.out = buildTsv(); render();
+  });
+
+  /* 逐格编辑：改值后不重渲染，避免打断输入 */
+  document.getElementById('main').addEventListener('input', function(e){
+    var t = e.target;
+    if(!t.classList || !t.classList.contains('cel')) return;
+    var i = +t.getAttribute('data-i'), f = t.getAttribute('data-f');
+    if(!S.rows[i]) return;
+    S.rows[i][f] = t.value;
+    var r = S.rows[i];
+    var tags=[];
+    if(utf8len(r.name)>MAX_NAME) tags.push('台名超长');
+    if(!/^https?:\/\//i.test(r.url)) tags.push('地址非法');
+    if(utf8len(r.url)>MAX_URL) tags.push('地址超长');
+    var cell = t.parentNode.nextSibling.nextSibling;
+    if(cell && cell.classList && cell.classList.contains('s')){
+      cell.innerHTML = tags.map(function(x){ return '<span class="tag x">'+x+'</span>'; }).join(' ');
+    }
+    S.out = buildTsv();
+  });
+  document.getElementById('main').addEventListener('change', function(e){
+    var t = e.target;
+    if(t.tagName && t.tagName.toLowerCase()==='select'){
+      var i = +t.getAttribute('data-i'), f = t.getAttribute('data-f');
+      if(!S.rows[i]) return;
+      S.rows[i][f] = t.value;
+      normalize(); S.out = buildTsv();
+    }
+  });
+
+  var od = document.getElementById('optDedup');
+  if(od) od.addEventListener('change', function(){ S.opt.dedup = od.checked; refresh(); });
+  var og = document.getElementById('optGuess');
+  if(og) og.addEventListener('change', function(){ S.opt.guess = og.checked; refresh(); });
+
+  var bd = document.getElementById('btnDl');
+  if(bd) bd.addEventListener('click', function(){
+    download(TARGET, S.out || buildTsv());
+  });
+  var bcpy = document.getElementById('btnCopy');
+  if(bcpy) bcpy.addEventListener('click', function(){
+    var txt = S.out || buildTsv();
+    if(!txt) return;
+    var ta2 = document.createElement('textarea');
+    ta2.value = txt; ta2.style.position='fixed'; ta2.style.left='-9999px';
+    document.body.appendChild(ta2); ta2.select();
+    var ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta2);
+    alert(ok ? '已复制到剪贴板。\n\n⚠️ 粘贴到记事本另存为 UTF-8 时，'
+              + '记得选「无 BOM」，换行选 LF，否则固件读不了。'
+            : '复制失败，请改用「下载」按钮。');
+  });
+  var be = document.getElementById('btnEx');
+  if(be) be.addEventListener('click', function(){
+    download('stations.example.tsv', buildExample());
+  });
+}
+
+function readFiles(fs){
+  if(!fs.length) return;
+  var names=[], done=0, merged=[];
+  fs.forEach(function(f){
+    var r = new FileReader();
+    r.onload = function(){
+      var d = detectAndDecode(r.result);
+      names.push(f.name);
+      S.enc = d.enc;
+      var p = parseInput(d.text);
+      merged = merged.concat(p.rows);
+      done++;
+      if(done===fs.length){
+        S.srcName = names.join(' + ');
+        S.rows = merged;
+        refresh();
+      }
+    };
+    r.onerror = function(){
+      done++;
+      if(done===fs.length){ S.srcName = names.join(' + '); S.rows = merged; refresh(); }
+    };
+    r.readAsArrayBuffer(f);
+  });
+}
+
+function ingestText(text, src){
+  if(!String(text).trim()) { alert('内容是空的。'); return; }
+  var p = parseInput(text);
+  S.srcName = src;
+  S.enc = '';
+  S.rows = p.rows;
+  refresh();
+  if(!S.rows.length) alert('没解析出任何电台。\n\n请确认内容里有 http:// 或 https:// 开头的地址。');
+}
+
+function download(name, text){
+  /* ⚠️ Blob 里手工去掉 BOM，保证下载到的文件零 BOM */
+  var data = text.charCodeAt(0)===0xFEFF ? text.slice(1) : text;
+  var blob = new Blob([data], {type:'text/plain;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+}
+
+/* ══════════ 10. 示例台单 ══════════ */
+var SAMPLE_M3U = [ '#EXTM3U', '#EXTINF:-1,示例新闻广播', 'http://example.com/radio/news.mp3', '#EXTINF:-1,示例音乐台', 'http://example.com/radio/music.mp3', '#EXTINF:-1,示例交通广播', 'http://example.com/radio/traffic.mp3', '#EXTINF:-1,示例直播台（m3u8）', 'https://example.com/live/stream.m3u8', '', '示例乡镇广播,http://example.com/radio/local.mp3'].join('\n');
+
+/* ══════════ 11. 启动 ══════════ */
+document.getElementById('nav').addEventListener('click', function(e){
+  var p = e.target.getAttribute && e.target.getAttribute('data-page');
+  if(p){ S.page = p; render(); window.scrollTo(0,0); }
+});
+document.getElementById('btnTheme').addEventListener('click', function(){
+  var cur = document.documentElement.getAttribute('data-theme');
+  var nx  = (cur==='dark') ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', nx);
+  S.theme = nx; save();
+});
+document.getElementById('btnEn').addEventListener('click', function(){
+  S.lang = (S.lang==='zh') ? 'en' : 'zh';
+  document.documentElement.lang = (S.lang==='zh') ? 'zh-CN' : 'en';
+  save(); render();
+});
+function save(){
+  try{ localStorage.setItem('XIANFORGE', JSON.stringify({theme:S.theme,lang:S.lang})); }catch(e){}
+}
+function load(){
+  try{
+    var j = JSON.parse(localStorage.getItem('XIANFORGE')||'{}');
+    if(j.theme){ S.theme=j.theme; document.documentElement.setAttribute('data-theme', j.theme); }
+    if(j.lang){ S.lang=j.lang; document.documentElement.lang = (j.lang==='zh'?'zh-CN':'en'); }
+  }catch(e){}
+}
+load();
+render();
+
+/* 测试钩子 */
+window.XF = {
+  S:S, CATS:CATS, PROVS:PROVS, SPECIAL_PROV:SPECIAL_PROV,
+  MAX_N:MAX_N, MAX_NAME:MAX_NAME, MAX_URL:MAX_URL, TARGET:TARGET,
+  detectAndDecode:detectAndDecode, parseInput:parseInput,
+  extinfTitle:extinfTitle,
+  guessCat:guessCat, guessProv:guessProv,
+  normalize:normalize, buildTsv:buildTsv, buildExample:buildExample,
+  selfCheck:selfCheck, utf8len:utf8len, refresh:refresh, ingestText:ingestText
+};
+</script>
+</body>
+</html>
