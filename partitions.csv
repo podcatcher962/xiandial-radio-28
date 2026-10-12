@@ -1,0 +1,22 @@
+﻿# es28 Suite · 分区表（16MB Flash，与拾声同口径）
+# Name,     Type, SubType, Offset,   Size,     Flags
+nvs,        data, nvs,     0x9000,   0x6000,
+phy_init,   data, phy,     0xf000,   0x1000,
+factory,    app,  factory, 0x10000,  0x700000,
+# ★ 10-11 加：语音模型分区（SPIFFS，3 MB）
+#   为什么独立分区、不链进 app：
+#     ① esp-sr 把模型当"数据文件"用 —— 走 esp_srmodel_init("model") 从 flash 读，
+#        换模型时不必重编 app；
+#     ② 分区表尾部本来就空着 ~8.9 MB ⇒ 直接放，**不用缩小 factory**；
+#     ③ ★★ nvs 分区的 offset/size 一个字都没动 ⇒ 改分区表【不会】丢
+#        配网 / 设置 / 续播表 / 历史 / 收藏（它们都在 nvs 里）。
+#   ⚠️ 镜像是 main/CMakeLists.txt 里 spiffs_create_partition_image(model ...) 生成的；
+#      烧录时必须把 model 分区一起写（见 _flash_es28.py 的 voice 模式）。
+#   ⚠️ 10-11 晚：3 MB 装不下 ⇒ 扩到 6 MB。
+#      原因不是"模型变大"，是 **SPIFFS 自身的元数据开销**：
+#      spiffsgen.py 用 page-size=256 / obj-name-len=32 / meta-len=4，
+#      2.83 MB 内容 + 每文件页头 + 索引页 > 3 MB ⇒ `SpiffsFullError`。
+#      6 MB 给到约 2 倍余量；本分区之后到 16 MB 还有 ~5.9 MB 空着。
+#      ⚠️ 分区表变了必须重烧 0x8000（`_flash_es28.py voice` 已含），
+#         nvs 仍原地不动 ⇒ 配网/设置/续播/历史/收藏零损失。
+model,      data, spiffs,  0x710000, 0x600000,
