@@ -1,0 +1,127 @@
+# es28 Suite · 关键配置（其余交给 idf.py 默认）
+# ★ 起点照抄拾声 lingqian-radio/sdkconfig 的实测值（同款 N16R8，一路跑通过）
+
+CONFIG_IDF_TARGET="esp32s3"
+
+# ---- Flash / PSRAM：N16R8（16MB Flash + 8MB OPI PSRAM）----
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+CONFIG_ESPTOOLPY_FLASHMODE="dio"
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+CONFIG_ESPTOOLPY_FLASHFREQ="80m"
+
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_USE_MALLOC=y
+CONFIG_SPIRAM_MEMTEST=y
+
+# ---- 分区表：自定义（16MB 布局，7MB app）----
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# ---- 控制台：⚠️ 本板【没有】USB 转串口芯片，走原生 USB-Serial-JTAG ----
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+CONFIG_ESP_CONSOLE_UART_NUM=-1
+
+# ---- 系统 ----
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240=y
+
+# ---- FATFS：SD 卡要读中文文件名，两个开关缺一不可 ----
+# ⚠️ 默认是 LFN_NONE ⇒ 中文名会退化成 8.3 短名乱码（拾声 10-03 踩过）。
+# ⚠️ CONFIG_FATFS_SECTOR_* 只影响「片上分区生成器」，SD 卡恒按 512B 走
+#    （ffconf.h 里 FF_SS_SDCARD 是硬编码 512），不用改。
+#
+# ★★★ 10-10 真机补的第二刀（两刀都要）：
+#   只开 LFN 还不够！**API 编码默认是 ANSI/OEM，配 CODEPAGE=437（美/西欧）**
+#   ⇒ 中文长名（FAT 上存的是 UTF-16）转 OEM 时查 437 表 ⇒ 转出一串废字节，
+#     真机现象正是 `opendir(/sdcard/<乱码>~1/<乱码>) failed`——
+#     名字**显示**是乱码也就算了，**拼回路径去 opendir 直接失败**，整个中文
+#     目录树对固件等于不存在（兰兰卡里的音频全在中文目录里 ⇒ "复制了却没反应"）。
+#   ⇒ 必须把 API 编码切到 UTF-8。切完 readdir 直接给 UTF-8，
+#     拼路径能打开、屏上也能直接显示（字库本来就是 UTF-8 码点）。
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_FATFS_MAX_LFN=255
+CONFIG_FATFS_VOLUME_COUNT=2
+# CONFIG_FATFS_API_ENCODING_ANSI_OEM is not set
+CONFIG_FATFS_API_ENCODING_UTF_8=y
+
+# ---- LVGL 内存：★ 10-10 实测必须改 ----
+# 现象：横版拾声 UI（ui_xiandial.c）开机一次建 7 个页面 + 259 格网格，
+#       把 LVGL【内建池】(CONFIG_LV_MEM_SIZE=64KB) 撑爆：
+#           LVGL pool: size=57500 B  free=32 B  used=100%
+#           Guru Meditation ... LoadProhibited  EXCVADDR=0x08 @ lv_draw_add_task
+# 修法：把「默认 malloc」从 LVGL_BUILTIN 改成 CLIB —— LVGL 直接走
+#       ESP-IDF 的 malloc，而本板 CONFIG_SPIRAM_USE_MALLOC=y ⇒ 自动吃 8MB PSRAM，
+#       池上限从 64KB 变成整个堆。
+# ⚠️ 这是 Kconfig 改动，会触发大范围重编（LVGL 头被到处 include）。
+# ⚠️⚠️ 必须选 choice 项，不能直接设 CONFIG_LV_USE_STDLIB_MALLOC ——
+#    那个是【派生值】（由本 choice 的 default 算出来），手改它会在
+#    下次 confgen 被静默还原（10-10 白编一轮，池仍是 57500 B 才发现）。
+# CONFIG_LV_USE_BUILTIN_MALLOC is not set
+CONFIG_LV_USE_CLIB_MALLOC=y
+
+# ---- 调试期：保留 assert 与 -Og，发布前再切 SIZE ----
+CONFIG_COMPILER_OPTIMIZATION_DEBUG=y
+CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE=y
+
+# ============================================================
+#  语音（ESP-SR）· 10-11 新增
+# ============================================================
+# ★ 唤醒词：wn9_himiaomiao_tts =「Hi，喵喵」
+#   为什么选它（兰兰从官方 94 个预置词里挑的）：
+#     ① **3 音节** —— 乐鑫要求 3~6 音节，2 音节（如「Hi，ESP」）容易被环境音误触发；
+#     ② 官方实测：1m/3m 唤醒率 **98%**、噪声下 94~96%、误触发 **12 小时 1 次**；
+#     ③ S3 支持（WakeNet9；`wn9s_*` 才是给无 PSRAM 芯片的精简档，不走那条）；
+#     ④ 只有 wn9 一个版本，不用挑。
+CONFIG_SR_WN_WN9_HIMIAOMIAO_TTS=y
+
+# ★ 命令词：MultiNet7 通用中文（mn7_cn，2.55 MB）。
+#   ⚠️ 词表【不在这里配】—— 用运行时 API `esp_mn_commands_add()` 在代码里注册
+#      （app_voice.c）。这样既不用改托管组件、也不用替换它的 fst 文件，
+#      更不会出现"组件一重拉、命令词被静默还原"（本项目铁律 40 那类坑）。
+CONFIG_SR_MN_CN_MULTINET7_QUANT=y
+
+# ★★★ 10-11 晚（第二轮，已定案）：模型走 **SPIFFS 分区** —— 不用 SD 卡、不用 packed。
+#
+#  完整证据链（读源码 + 扫预编译库字符串定的案，别再翻案）：
+#    libmultinet.a 里明明白白有这几条字符串：
+#        no %s or no %s, cannot build fst.      ← 我们真机看到的报错
+#        %s/%s/vocab  ｜  %s/%s/mn7_%s  ｜  commands_cn.txt
+#        get_model_base_path  ｜  read_spiffs_params  ｜  ESP_PARTITION_SUBTYPE_DATA_SPIFFS
+#    ⇒ MultiNet7 建 FST 时要**两个**条件同时成立：
+#        ① `get_model_base_path()` 要是个**真路径**（它拿去拼
+#           `<base>/<模型名>/vocab` 与 `<base>/fst/commands_cn.txt`）；
+#        ② 要有 **SPIFFS 分区**（`read_spiffs_params`，libhufzip 解压压缩模型数据用）。
+#    三条路逐个对照：
+#      · packed / mmap（`esp_srmodel_init` 在非 SDCARD 下的唯一分支）
+#        ⇒ model_path.c:173 硬调 `set_model_base_path(NULL)` ⇒ 路径变 `(null)/...`
+#          ⇒ fopen 失败 ⇒ 打印 `no (null)/... cannot build fst` ⇒ LoadProhibited 崩。
+#      · SD 卡（`CONFIG_MODEL_IN_SDCARD`）⇒ 路径有了（set_model_base_path），
+#        但没有 SPIFFS 分区 ⇒ `read_spiffs_params` 除零崩（hufzip_model.c:323）。
+#      · **SPIFFS（`srmodel_spiffs_init(part)`）⇒ 两条全满足** ✓
+#        它把分区挂到默认基路径 `/srmodel`（model_path.c:20 的初值，**不会**被置 NULL），
+#        同时 SPIFFS 在位 ⇒ hufzip 有参数。
+#  ⇒ 所以：模型镜像做成 **SPIFFS 镜像**（main/CMakeLists.txt 的
+#    `spiffs_create_partition_image(model …)` 生成 build/model.bin），
+#    由 app_voice.c **直接调 `srmodel_spiffs_init()`**（公开 API）。
+#  ⚠️ 下面这一行保持注释即可：Kconfig 的选择只影响 `esp_srmodel_init()`，
+#     而我们【不再调它】。选 SDCARD 反而会走进除零那条路。
+# CONFIG_MODEL_IN_SDCARD is not set
+
+# ★ 10-11 晚：SPIFFS 的**文件名长度上限**要从默认 32 提到 64。
+#   为什么（不是可选项，必须改）：
+#     ① `spiffs_create_partition_image` 建镜像时用的就是
+#        `--obj-name-len=${CONFIG_SPIFFS_OBJ_NAME_LEN}`（见 IDF 的
+#        components/spiffs/project_include.cmake）⇒ **生成与运行时同一个值**，
+#        改了天然一致，不存在"生成 32、挂载 64"的错配；
+#     ② 我们的模型名本身长：`/wn9_himiaomiao_tts/_MODEL_INFO_` 就已经 33 字符
+#        > 31（32 含结尾 '\0' 只剩 31 可用）⇒ spiffsgen 直接报
+#        `RuntimeError: object name … too long` 编译失败；
+#        平铺份 `/wn9_himiaomiao_tts__MODEL_INFO_` 更长（33）。
+#     ③ 代价：每个文件的对象头多 32 B（11 个文件 ≈ +352 B），可忽略。
+CONFIG_SPIFFS_OBJ_NAME_LEN=64
+
