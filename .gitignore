@@ -1,0 +1,114 @@
+# ============================================================
+#  拾声 (XianDial) · 2.8″ 硬件版 —— 发布版 .gitignore
+#  目标：0 台单 + 不泄露任何敏感内容 + 不把生成物当源码提交
+#  ★ 与拾声集（XianDial Suite）仓库那份同源同口径，条目按 2.8 的实际
+#    目录结构裁剪过（2.8 没有 en/、没有签语音、没有 build_pub/）。
+# ============================================================
+#
+#  ⚠️⚠️ 【.gitignore 不支持行内注释】
+#    git 会把「模式 + 行尾那串 # 注释」整体当成一个文件名来匹配，
+#    于是一行也匹配不上 —— 规则【静默失效】，而且没有任何报错。
+#    （拾声集那边 10-08 发布前就栽在这上面，7 条规则全废。）
+#    ⇒ 规则一律【单独成行】，注释写在它上面一行。
+#    ⇒ 加完规则用这条自查（应能列出所有被忽略的文件）：
+#         git check-ignore -v <路径>
+#
+# ============================================================
+
+# ---- ① 编译产物 ----
+build/
+sdkconfig.old
+*.elf
+*.map
+*.bin.part
+
+# ---- ② ★★★ 台单（本仓库发布版 = 0 条，这两份是自用版实体）----
+#   含 1254 个真实台名与直播地址。仓库里只保留 net_stations_pub.c/.h
+#   （0 条空台单），由 CMakeLists 的 if(EXISTS net_stations_pub.c) 二选一。
+#   ⚠️ 只删台单文件【不够】—— 见下面 ②b、②c 两条，那是同一个台单的
+#      另外两种「字形/字符串」形态。
+main/net_stations.c
+main/net_stations.h
+
+# ---- ②b ★★ 台名字库：只排【自用版】，发布版字库必须进仓库 ----
+#   自用版 xs_font_st16.c 是拿【本机 1254 个台名里出现的 776 个字】烘出来的。
+#   台单文件置空了、这个文件照旧进仓库，等于把台单以【字形】形式留在固件里
+#   —— 置空白做。同理 xs_font_cjk12.c（自用版那份并了台单那 750 字）。
+#
+#   ⚠️ 通配符 `xs_font_st*.c` 【不匹配】发布版（pub 在 st 前面）；
+#      `xs_font_pub_cjk12.c` 也不被下面第二条匹配 —— 这正是我们要的：
+#      发布包自带通用字库、能开箱即编。
+#   ⚠️ 改文件名时极易踩：若把发布版改名成 xs_font_st16_pub.c /
+#      xs_font_cjk12_pub.c，会被这两条一起排掉，发布包缺字库、
+#      链接期报 undefined reference。**命名必须是 xs_font_pub_***。
+main/fonts/xs_font_st*.c
+main/fonts/xs_font_st*.bin
+main/fonts/xs_font_cjk12.c
+
+# ---- ②c ★★ 收藏播种名单（源码扫描查不出来的那类泄漏）----
+#   net_stations_seed.h 里是作者常听的 10 个真实台名。它原本硬编码在
+#   app_fav.c 的 k_seed[] 里 ⇒ 发布版固件的 .bin 里带着这 10 个台名；
+#   它们不是 URL、不是路径、不是凭据，只是中文字符串，规则扫描全绿也照样漏，
+#   最后是靠【直接 grep 编译产物】才抓到的。
+#   ⇒ 名单随台单版本走：自用版这份排除；发布版不 include 任何名单
+#     （CMakeLists 用 XS_FAV_PUBLISH 宏关掉播种）。
+main/net_stations_seed.h
+
+# ---- ②d ★ 版本排障笔记（含第三方公网地址与诊断过程）----
+#   发布版 app_version.h 走 XS_FAV_PUBLISH 分支的简短说明，不含这些细节。
+main/app_version_note_local.h
+
+# ---- ③ 字体源文件（体积大，授权各自带 OFL）----
+#   .ttf/.otf 本体合计二十多 MB，不入库；但 OFL-1.1 授权文本必须随包
+#   （下面 !OFL-*.txt 放行 —— 本仓库根已有两份，且与上游逐字节一致）。
+*.ttf
+*.otf
+*.zip
+_fontsrc/
+!OFL-*.txt
+
+# ---- ③b ★★★ 语音模型（ESP-SR）----
+#   两个目录都是【生成物 / 组件原样拷贝】，合计约 5.8 MB：
+#     _voice_models/   从 esp-sr 组件里挑出的原始模型 + 打包出的 srmodels.bin
+#     _voice_spiffs/   CMake 的 spiffs_create_partition_image 读的暂存目录，
+#                      由 _prep_voice_models.py 生成 ⇒ 进构建产物 model.bin
+#   ★ 它们不是我们的源码，而是 Espressif 的模型数据；随【固件镜像】分发
+#     （Release 资产里的 model 分区镜像／合并镜像），不随源码仓库分发。
+#   ⚠️ clone 下来要重出发布镜像时，先跑一次 python _prep_voice_models.py
+#      （它从 managed_components/espressif__esp-sr 里取模型）。
+_voice_models/
+_voice_spiffs/
+
+# ---- ④ 本地调试与运行产物 ----
+*.bak
+*.bak-*
+*.bak_*
+_es28_bootlog.txt
+_es28_shot*.bin
+_es28_shot*.png
+_saves/
+_nvs_backup*.bin
+_build*.log
+_flash*.log
+_t1.log
+_t2.log
+
+# ---- ⑤ 工具缓存 / 编辑器 ----
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.vscode/
+.idea/
+*.swp
+*~
+
+# ---- ⑥ ★★ ESP-IDF 自动拉取的第三方组件 ----
+#   managed_components/ 是 idf.py build 时按 dependencies.lock 自动 clone 的
+#   （LVGL 一个就 6980 个文件、含全部 docs/demo/CI 配置）。
+#   ★ 不排除的三个后果：① 仓库瞬间变重、clone 变慢；② 把别人的 docs/CI
+#     混进自己的仓库，让人误以为是我们的作品；③ docs 里那些
+#     /home/joe/、邮箱之类的字符串会被发布扫描当成泄漏，白花时间排查。
+#   ⇒ 靠 dependencies.lock + main/idf_component.yml 恢复，第一次 build
+#     会自动重新拉（需要网络）。
+managed_components/
