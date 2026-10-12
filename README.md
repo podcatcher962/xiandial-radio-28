@@ -2,7 +2,7 @@
 
 **一台 ESP32-S3 桌面网络收音机：13 栏目 / 42 地区的网络电台直播 ＋ TF 卡本地音频 ＋ 语音控制。**
 
-> 烧录 / Flashing: [FLASHING.md](FLASHING.md)
+> 烧录 / Flashing: [FLASHING.md](FLASHING.md) ｜ English: [README.en.md](README.en.md)
 >
 > 当前固件版本：**v2.8.0**（2.8″ 平台首版）
 >
